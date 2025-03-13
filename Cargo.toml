@@ -16,6 +16,9 @@ anyhow = "1.0.89"
 async-channel = "2.3.1"
 time = { version = "0.3.36" }
 thermometer = { git = "https://github.com/ippras-blca/thermometer" }
+tokio = { version = "1.44.1", features = ["rt", "net", "time", "io-util", "macros"] }
+tokio-modbus = { version = "0.16.1", features = ["tcp-server"] }
+heapless = "0.8.0"
 # led = { git = "https://github.com/ippras-blca/led" }
 
 [build-dependencies]

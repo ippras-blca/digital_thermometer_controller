@@ -11,6 +11,9 @@
 * link:https://github.com/esp-rs/esp-hal/issues/2892[no std]
 * link:https://github.com/Mossop/garage-sensor[no std ]
 
+* link:https://github.com/esp-rs/esp-idf-svc/blob/master/examples/tcp_async.rs[tokio tcp]
+* link:https://github.com/dephy-io/dephy-esp32c3-rust-boilerplate[tokio boilerplate]
+
 == Oneshot environment setup
 
 list:: `usbipd list`
