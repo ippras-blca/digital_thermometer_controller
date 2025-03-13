@@ -1,0 +1,37 @@
+[package]
+name = "digital_thermometer_controller"
+version = "0.1.0"
+authors = ["kgv <kgv@users.noreply.github.com>"]
+edition = "2024"
+resolver = "2"
+
+[[bin]]
+name = "digital_thermometer_controller"
+harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
+
+[dependencies]
+log = "0.4.26"
+esp-idf-svc = { version = "0.51.0", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
+anyhow = "1.0.89"
+async-channel = "2.3.1"
+time = { version = "0.3.36" }
+thermometer = { git = "https://github.com/ippras-blca/thermometer" }
+# led = { git = "https://github.com/ippras-blca/led" }
+
+[build-dependencies]
+embuild = "0.33.0"
+
+[features]
+default = []
+
+experimental = ["esp-idf-svc/experimental"]
+
+# [[package.metadata.esp-idf-sys.extra_components]]
+# remote_component = { name = "onewire_bus", version = "^1.0.2" }
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
