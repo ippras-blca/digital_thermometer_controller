@@ -1,6 +1,6 @@
 [package]
 name = "digital_thermometer_controller"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["kgv <kgv@users.noreply.github.com>"]
 edition = "2024"
 resolver = "2"
@@ -10,12 +10,16 @@ name = "digital_thermometer_controller"
 harness = false # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
 [dependencies]
-log = "0.4.26"
-esp-idf-svc = { version = "0.51.0", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
 anyhow = "1.0.89"
 async-channel = "2.3.1"
-time = { version = "0.3.36" }
+esp-idf-svc = { version = "0.51.0", features = ["critical-section", "embassy-time-driver", "embassy-sync"] }
+heapless = "0.8.0"
+log = "0.4.26"
 thermometer = { git = "https://github.com/ippras-blca/thermometer" }
+thiserror = "2.0.12"
+time = { version = "0.3.36" }
+tokio = { version = "1.44.1", features = ["rt", "net", "time", "io-util", "macros"] }
+tokio-modbus = { version = "0.16.1", features = ["tcp-server"] }
 # led = { git = "https://github.com/ippras-blca/led" }
 
 [build-dependencies]
