@@ -52,44 +52,30 @@ fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    let event_loop = EspSystemEventLoop::take()?;
-    let timer = EspTaskTimerService::new()?;
-    let mut peripherals = Peripherals::take()?;
-    let nvs_default_partition = EspDefaultNvsPartition::take()?;
     // spawn(async move {
     //     loop {
     //         log::info!("tokio 2");
     //         sleep(Duration::from_millis(1000)).await;
     //     }
     // });
-    spawn(async move {
-        loop {
-            info!("Spawn temperature");
-            if let Err(error) =
-                temperature::run(&mut peripherals.pins.gpio2, &mut peripherals.rmt.channel0).await
-            {
-                error!("{error:?}");
-            }
-            sleep(Duration::from_millis(1000)).await;
-        }
-    });
-
+    // spawn(async move {
+    //     loop {
+    //         info!("Spawn temperature");
+    //         if let Err(error) =
+    //             temperature::run(&mut peripherals.pins.gpio2, &mut peripherals.rmt.channel0).await
+    //         {
+    //             error!("{error:?}");
+    //         }
+    //         sleep(Duration::from_millis(1000)).await;
+    //     }
+    // });
+    let event_loop = EspSystemEventLoop::take()?;
+    let timer = EspTaskTimerService::new()?;
+    let peripherals = Peripherals::take()?;
+    let nvs = EspDefaultNvsPartition::take()?;
+    let temperature_sender = temperature::run(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
     // Initialize the network stack, this must be done before starting the server
-    // let mut wifi_connection = Connector::new(
-    //     peripherals.modem,
-    //     event_loop,
-    //     timer,
-    //     Some(nvs_default_partition),
-    // )
-    // .await?;
-    // wifi_connection.connect().await?;
-    let mut wifi = connect(
-        peripherals.modem,
-        event_loop.clone(),
-        timer,
-        Some(nvs_default_partition),
-    )
-    .await?;
+    let mut wifi = connect(peripherals.modem, event_loop.clone(), timer, Some(nvs)).await?;
     let _subscription = event_loop.subscribe::<WifiEvent, _>(move |event| {
         info!("Got event: {event:?}");
         if let WifiEvent::StaDisconnected(_) = event {

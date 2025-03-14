@@ -16,7 +16,11 @@ use tokio_modbus::{
     },
 };
 
+use crate::temperature::ADDRESSES;
+
 static SOCKET_ADDR: LazyLock<SocketAddr> = LazyLock::new(|| "0.0.0.0:5502".parse().unwrap());
+
+const ZERO_REGISTER: u16 = 0;
 
 pub(super) async fn server() -> Result<()> {
     let server = Server::new(TcpListener::bind(*SOCKET_ADDR).await?);
@@ -36,7 +40,6 @@ struct ExampleService {
 
 impl ExampleService {
     fn new() -> Self {
-        // Insert some test data as register values.
         let mut input_registers = HashMap::new();
         input_registers.insert(0, 1234);
         input_registers.insert(1, 5678);
@@ -59,9 +62,8 @@ impl Service for ExampleService {
     type Future = Ready<Result<Self::Response, Self::Exception>>;
 
     fn call(&self, request: Self::Request) -> Self::Future {
-        let res = match request {
+        let response = match request {
             Request::ReadInputRegisters(address, count) => {
-                info!("Read input registers {address} {count}");
                 read_register(&self.input_registers.lock().unwrap(), address, count)
                     .map(Response::ReadInputRegisters)
             }
@@ -88,48 +90,45 @@ impl Service for ExampleService {
                 Err(ExceptionCode::IllegalFunction)
             }
         };
-        ready(res)
+        ready(response)
     }
 }
 
-struct Registers {
-    input: Arc<Mutex<HashMap<u16, u16>>>,
-    holding: Arc<Mutex<HashMap<u16, u16>>>,
-}
-
-impl Registers {
-    fn new() -> Self {
-        let mut input = HashMap::new();
-        input.insert(0, 1234);
-        input.insert(1, 5678);
-        let mut holding = HashMap::new();
-        holding.insert(0, 10);
-        holding.insert(1, 20);
-        holding.insert(2, 30);
-        holding.insert(3, 40);
-        Self {
-            input: Arc::new(Mutex::new(input)),
-            holding: Arc::new(Mutex::new(holding)),
-        }
-    }
-
-    /// Helper function implementing reading registers from a HashMap.
-    fn read(
-        registers: &HashMap<u16, u16>,
-        address: u16,
-        count: u16,
-    ) -> Result<Vec<u16>, ExceptionCode> {
-        let mut buffer = vec![0; count as _];
-        for index in 0..count {
-            let register_address = address + index;
-            if let Some(register) = registers.get(&register_address) {
-                buffer[index as usize] = *register;
-            } else {
-                error!("SERVER: Exception::IllegalDataAddress");
-                return Err(ExceptionCode::IllegalDataAddress);
+fn call(service: &ExampleService, request: Request) -> Result<Response, ExceptionCode> {
+    match request {
+        Request::ReadInputRegisters(index, count) => {
+            let addresses = ADDRESSES.get().unwrap();
+            if index < addresses.len() as _ {
+                return Err(ExceptionCode::IllegalFunction);
             }
+            let address = &addresses[index as usize];
+            // let temperature = thermometer.temperature(&address)?;
+            // info!("{address:x?}: {temperature}");
+            let v = vec![];
+            Ok(Response::ReadInputRegisters(v))
         }
-        Ok(buffer)
+        // Request::ReadHoldingRegisters(address, count) => {
+        //     read_register(&self.holding_registers.lock().unwrap(), address, count)
+        //         .map(Response::ReadHoldingRegisters)
+        // }
+        // Request::WriteMultipleRegisters(address, values) => write_register(
+        //     &mut self.holding_registers.lock().unwrap(),
+        //     address,
+        //     &values,
+        // )
+        // .map(|_| Response::WriteMultipleRegisters(address, values.len() as u16)),
+        // Request::WriteSingleRegister(address, value) => write_register(
+        //     &mut self.holding_registers.lock().unwrap(),
+        //     address,
+        //     slice::from_ref(&value),
+        // )
+        // .map(|_| Response::WriteSingleRegister(address, value)),
+        _ => {
+            error!(
+                "SERVER: Exception::IllegalFunction - Unimplemented function code in request: {request:?}"
+            );
+            Err(ExceptionCode::IllegalFunction)
+        }
     }
 }
 
