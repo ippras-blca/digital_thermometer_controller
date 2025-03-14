@@ -1,12 +1,13 @@
+use anyhow::Result;
 use log::{error, info};
 use std::{
     collections::HashMap,
-    future,
+    future::{Ready, ready},
     net::SocketAddr,
-    sync::{Arc, Mutex},
-    time::Duration,
+    slice,
+    sync::{Arc, LazyLock, Mutex},
 };
-use tokio::{net::TcpListener, select, time::sleep};
+use tokio::net::TcpListener;
 use tokio_modbus::{
     prelude::*,
     server::{
@@ -15,70 +16,17 @@ use tokio_modbus::{
     },
 };
 
-pub(super) async fn server() -> anyhow::Result<()> {
-    let socket_addr = "0.0.0.0:5502".parse().unwrap();
-    select! {
-        _ = server_context(socket_addr) => unreachable!(),
-        _ = client_context(socket_addr) => println!("Exiting"),
-    }
-    Ok(())
-}
+static SOCKET_ADDR: LazyLock<SocketAddr> = LazyLock::new(|| "0.0.0.0:5502".parse().unwrap());
 
-async fn server_context(socket_addr: SocketAddr) -> anyhow::Result<()> {
-    error!("Starting up server on {socket_addr}");
-    let listener = TcpListener::bind(socket_addr).await?;
-    let server = Server::new(listener);
+pub(super) async fn server() -> Result<()> {
+    let server = Server::new(TcpListener::bind(*SOCKET_ADDR).await?);
     let new_service = |_socket_addr| Ok(Some(ExampleService::new()));
     let on_connected = |stream, socket_addr| async move {
         accept_tcp_connection(stream, socket_addr, new_service)
     };
-    let on_process_error = |error| {
-        eprintln!("{error}");
-    };
+    let on_process_error = |error| error!("{error}");
     server.serve(&on_connected, on_process_error).await?;
     Ok(())
-}
-
-async fn client_context(socket_addr: SocketAddr) {
-    tokio::join!(
-        async {
-            // Give the server some time for starting up
-            sleep(Duration::from_secs(1)).await;
-
-            println!("CLIENT: Connecting client...");
-            let mut ctx = tcp::connect(socket_addr).await.unwrap();
-
-            println!("CLIENT: Reading 2 input registers...");
-            let response = ctx.read_input_registers(0x00, 2).await.unwrap();
-            println!("CLIENT: The result is '{response:?}'");
-            assert_eq!(response.unwrap(), vec![1234, 5678]);
-
-            println!("CLIENT: Writing 2 holding registers...");
-            ctx.write_multiple_registers(0x01, &[7777, 8888])
-                .await
-                .unwrap()
-                .unwrap();
-
-            // Read back a block including the two registers we wrote.
-            println!("CLIENT: Reading 4 holding registers...");
-            let response = ctx.read_holding_registers(0x00, 4).await.unwrap();
-            println!("CLIENT: The result is '{response:?}'");
-            assert_eq!(response.unwrap(), vec![10, 7777, 8888, 40]);
-
-            // Now we try to read with an invalid register address.
-            // This should return a Modbus exception response with the code
-            // IllegalDataAddress.
-            println!(
-                "CLIENT: Reading nonexistent holding register address... (should return IllegalDataAddress)"
-            );
-            let response = ctx.read_holding_registers(0x100, 1).await.unwrap();
-            println!("CLIENT: The result is '{response:?}'");
-            assert!(matches!(response, Err(ExceptionCode::IllegalDataAddress)));
-
-            println!("CLIENT: Done.")
-        },
-        tokio::time::sleep(Duration::from_secs(5))
-    );
 }
 
 struct ExampleService {
@@ -108,75 +56,117 @@ impl Service for ExampleService {
     type Request = Request<'static>;
     type Response = Response;
     type Exception = ExceptionCode;
-    type Future = future::Ready<Result<Self::Response, Self::Exception>>;
+    type Future = Ready<Result<Self::Response, Self::Exception>>;
 
-    fn call(&self, req: Self::Request) -> Self::Future {
-        let res = match req {
-            Request::ReadInputRegisters(addr, cnt) => {
-                register_read(&self.input_registers.lock().unwrap(), addr, cnt)
+    fn call(&self, request: Self::Request) -> Self::Future {
+        let res = match request {
+            Request::ReadInputRegisters(address, count) => {
+                info!("Read input registers {address} {count}");
+                read_register(&self.input_registers.lock().unwrap(), address, count)
                     .map(Response::ReadInputRegisters)
             }
-            Request::ReadHoldingRegisters(addr, cnt) => {
-                register_read(&self.holding_registers.lock().unwrap(), addr, cnt)
+            Request::ReadHoldingRegisters(address, count) => {
+                read_register(&self.holding_registers.lock().unwrap(), address, count)
                     .map(Response::ReadHoldingRegisters)
             }
-            Request::WriteMultipleRegisters(addr, values) => {
-                register_write(&mut self.holding_registers.lock().unwrap(), addr, &values)
-                    .map(|_| Response::WriteMultipleRegisters(addr, values.len() as u16))
-            }
-            Request::WriteSingleRegister(addr, value) => register_write(
+            Request::WriteMultipleRegisters(address, values) => write_register(
                 &mut self.holding_registers.lock().unwrap(),
-                addr,
-                std::slice::from_ref(&value),
+                address,
+                &values,
             )
-            .map(|_| Response::WriteSingleRegister(addr, value)),
+            .map(|_| Response::WriteMultipleRegisters(address, values.len() as u16)),
+            Request::WriteSingleRegister(address, value) => write_register(
+                &mut self.holding_registers.lock().unwrap(),
+                address,
+                slice::from_ref(&value),
+            )
+            .map(|_| Response::WriteSingleRegister(address, value)),
             _ => {
                 println!(
-                    "SERVER: Exception::IllegalFunction - Unimplemented function code in request: {req:?}"
+                    "SERVER: Exception::IllegalFunction - Unimplemented function code in request: {request:?}"
                 );
                 Err(ExceptionCode::IllegalFunction)
             }
         };
-        future::ready(res)
+        ready(res)
+    }
+}
+
+struct Registers {
+    input: Arc<Mutex<HashMap<u16, u16>>>,
+    holding: Arc<Mutex<HashMap<u16, u16>>>,
+}
+
+impl Registers {
+    fn new() -> Self {
+        let mut input = HashMap::new();
+        input.insert(0, 1234);
+        input.insert(1, 5678);
+        let mut holding = HashMap::new();
+        holding.insert(0, 10);
+        holding.insert(1, 20);
+        holding.insert(2, 30);
+        holding.insert(3, 40);
+        Self {
+            input: Arc::new(Mutex::new(input)),
+            holding: Arc::new(Mutex::new(holding)),
+        }
+    }
+
+    /// Helper function implementing reading registers from a HashMap.
+    fn read(
+        registers: &HashMap<u16, u16>,
+        address: u16,
+        count: u16,
+    ) -> Result<Vec<u16>, ExceptionCode> {
+        let mut buffer = vec![0; count as _];
+        for index in 0..count {
+            let register_address = address + index;
+            if let Some(register) = registers.get(&register_address) {
+                buffer[index as usize] = *register;
+            } else {
+                error!("SERVER: Exception::IllegalDataAddress");
+                return Err(ExceptionCode::IllegalDataAddress);
+            }
+        }
+        Ok(buffer)
     }
 }
 
 /// Helper function implementing reading registers from a HashMap.
-fn register_read(
+fn read_register(
     registers: &HashMap<u16, u16>,
-    addr: u16,
-    cnt: u16,
+    address: u16,
+    count: u16,
 ) -> Result<Vec<u16>, ExceptionCode> {
-    let mut response_values = vec![0; cnt.into()];
-    for i in 0..cnt {
-        let reg_addr = addr + i;
-        if let Some(r) = registers.get(&reg_addr) {
-            response_values[i as usize] = *r;
+    let mut buffer = vec![0; count as _];
+    for index in 0..count {
+        let register_address = address + index;
+        if let Some(register) = registers.get(&register_address) {
+            buffer[index as usize] = *register;
         } else {
-            println!("SERVER: Exception::IllegalDataAddress");
+            error!("SERVER: Exception::IllegalDataAddress");
             return Err(ExceptionCode::IllegalDataAddress);
         }
     }
-
-    Ok(response_values)
+    Ok(buffer)
 }
 
-/// Write a holding register. Used by both the write single register
-/// and write multiple registers requests.
-fn register_write(
+/// Write a holding register. Used by both the write single register and write
+/// multiple registers requests.
+fn write_register(
     registers: &mut HashMap<u16, u16>,
-    addr: u16,
+    address: u16,
     values: &[u16],
 ) -> Result<(), ExceptionCode> {
-    for (i, value) in values.iter().enumerate() {
-        let reg_addr = addr + i as u16;
-        if let Some(r) = registers.get_mut(&reg_addr) {
-            *r = *value;
+    for (index, value) in values.iter().enumerate() {
+        let register_address = address + index as u16;
+        if let Some(register) = registers.get_mut(&register_address) {
+            *register = *value;
         } else {
-            println!("SERVER: Exception::IllegalDataAddress");
+            error!("SERVER: Exception::IllegalDataAddress");
             return Err(ExceptionCode::IllegalDataAddress);
         }
     }
-
     Ok(())
 }

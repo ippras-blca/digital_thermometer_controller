@@ -15,6 +15,7 @@ use esp_idf_svc::{
 use log::{info, warn};
 use std::{net::Ipv4Addr, str::FromStr, sync::Arc};
 use tokio::{
+    spawn,
     sync::RwLock,
     time::{Duration, sleep},
 };
@@ -49,10 +50,8 @@ pub(super) async fn connect(
 
     wifi.start().await?;
     info!("Wifi started");
-
     wifi.connect().await?;
     info!("Wifi connected");
-
     wifi.wait_netif_up().await?;
     info!("Wifi netif up");
 

@@ -1,5 +1,4 @@
 use std::net::{SocketAddr, ToSocketAddrs as _};
-
 use esp_idf_svc::{sys::EspError, timer::EspTaskTimerService};
 use log::{error, info};
 use tokio::{
@@ -16,7 +15,7 @@ use tokio::{
 // async fn tcp_client() -> Result<(), io::Error> {
 //     info!("About to open a TCP connection to 1.1.1.1 port 80");
 //     let socket_addr = "one.one.one.one:80".to_socket_addrs()?.next().unwrap();
-//     let mut stream = Async::<TcpStream>::connect(socket_addr).await?;
+//     let mut stream = TcpStream::connect(socket_addr).await?;
 
 //     stream.write_all("GET / HTTP/1.0\n\n".as_bytes()).await?;
 
