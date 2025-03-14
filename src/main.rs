@@ -90,7 +90,7 @@ async fn run() -> Result<()> {
     // try_join!(wifi_connection.connect(), modbus::server())?;
     select! {
         // _ = tcp::server() => println!("Exiting"),
-        _ = modbus::server() => println!("Exiting"),
+        _ = modbus::server(temperature_sender) => println!("Exiting"),
     }
     Ok(())
 }
