@@ -17,12 +17,10 @@ use tokio_modbus::{
 
 pub(super) async fn server() -> anyhow::Result<()> {
     let socket_addr = "0.0.0.0:5502".parse().unwrap();
-
     select! {
         _ = server_context(socket_addr) => unreachable!(),
         _ = client_context(socket_addr) => println!("Exiting"),
     }
-
     Ok(())
 }
 
@@ -34,8 +32,8 @@ async fn server_context(socket_addr: SocketAddr) -> anyhow::Result<()> {
     let on_connected = |stream, socket_addr| async move {
         accept_tcp_connection(stream, socket_addr, new_service)
     };
-    let on_process_error = |err| {
-        eprintln!("{err}");
+    let on_process_error = |error| {
+        eprintln!("{error}");
     };
     server.serve(&on_connected, on_process_error).await?;
     Ok(())

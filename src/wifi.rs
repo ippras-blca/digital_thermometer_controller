@@ -8,7 +8,8 @@ use esp_idf_svc::{
     ipv4::{self, DHCPClientSettings},
     netif::{self, EspNetif, NetifConfiguration, NetifStack},
     nvs::EspDefaultNvsPartition,
-    timer::{EspTimerService, Task},
+    sys::EspError,
+    timer::{EspTaskTimerService, EspTimerService, Task},
     wifi::{AsyncWifi, AuthMethod, ClientConfiguration, Configuration, EspWifi, WifiDriver},
 };
 use log::{info, warn};
@@ -32,22 +33,48 @@ const PASSWORD: &str = env!("PASSWORD");
 //     Ok(())
 // }
 
-// Shared state of the Wi-Fi connection.
-pub struct WifiState {
-    pub mac_address: String,
-    pub ssid: String,
-    ip_address: RwLock<Option<Ipv4Addr>>,
+pub(super) async fn connect(
+    modem: Modem,
+    event_loop: EspEventLoop<System>,
+    timer: EspTimerService<Task>,
+    nvs: Option<EspDefaultNvsPartition>,
+) -> Result<EspWifi<'static>, EspError> {
+    let mut esp_wifi = EspWifi::new(modem, event_loop.clone(), nvs.clone())?;
+    let mut wifi = AsyncWifi::wrap(&mut esp_wifi, event_loop.clone(), timer)?;
+    wifi.set_configuration(&Configuration::Client(ClientConfiguration {
+        ssid: SSID.try_into().unwrap(),
+        password: PASSWORD.try_into().unwrap(),
+        ..Default::default()
+    }))?;
+
+    wifi.start().await?;
+    info!("Wifi started");
+
+    wifi.connect().await?;
+    info!("Wifi connected");
+
+    wifi.wait_netif_up().await?;
+    info!("Wifi netif up");
+
+    Ok(esp_wifi)
 }
 
-impl WifiState {
+// Shared state of the Wi-Fi connection.
+pub struct State {
+    pub mac_addr: String,
+    pub ssid: String,
+    ip_addr: RwLock<Option<Ipv4Addr>>,
+}
+
+impl State {
     pub async fn ip_address(&self) -> Option<Ipv4Addr> {
-        *self.ip_address.read().await
+        *self.ip_addr.read().await
     }
 }
 
 // Wi-Fi connector.
 pub struct Connector<'a> {
-    pub state: Arc<WifiState>,
+    pub state: Arc<State>,
     wifi: AsyncWifi<EspWifi<'a>>,
 }
 
@@ -71,13 +98,13 @@ impl<'a> Connector<'a> {
 
         // Store the MAC address in the shared wifi state
         let mac = net_if.get_mac()?;
-        let mac_address = format!(
+        let mac_addr = format!(
             "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
         );
-        let state = Arc::new(WifiState {
-            ip_address: RwLock::new(None),
-            mac_address,
+        let state = Arc::new(State {
+            ip_addr: RwLock::new(None),
+            mac_addr,
             ssid: SSID.to_owned(),
         });
 
@@ -129,7 +156,7 @@ impl<'a> Connector<'a> {
             }
 
             let ip_info = self.wifi.wifi().sta_netif().get_ip_info();
-            *self.state.ip_address.write().await = ip_info.ok().map(|info| info.ip);
+            *self.state.ip_addr.write().await = ip_info.ok().map(|info| info.ip);
             info!("Connected to '{}': {ip_info:#?}", self.state.ssid);
 
             // Wait for Wi-Fi to be down

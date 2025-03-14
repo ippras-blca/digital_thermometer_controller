@@ -18,16 +18,18 @@ use esp_idf_svc::{
 };
 use log::{error, info};
 use std::sync::OnceLock;
+use tcp::server;
 use thermometer::{
     Ds18b20Driver,
     scratchpad::{ConfigurationRegister, Resolution, Scratchpad},
 };
 use tokio::{
     runtime::Builder,
-    spawn,
+    select, spawn,
     time::{Duration, sleep},
     try_join,
 };
+use wifi::connect;
 
 static ADDRESSES: OnceLock<Vec<OWAddress>> = OnceLock::new();
 
@@ -49,26 +51,39 @@ fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    spawn(async move {
-        loop {
-            log::info!("tokio 2");
-            sleep(Duration::from_millis(1000)).await;
-        }
-    });
+    // spawn(async move {
+    //     loop {
+    //         log::info!("tokio 2");
+    //         sleep(Duration::from_millis(1000)).await;
+    //     }
+    // });
     let event_loop = EspSystemEventLoop::take()?;
     let timer = EspTaskTimerService::new()?;
     let peripherals = Peripherals::take()?;
     let nvs_default_partition = EspDefaultNvsPartition::take()?;
     // Initialize the network stack, this must be done before starting the server
-    let mut wifi_connection = Connector::new(
+    // let mut wifi_connection = Connector::new(
+    //     peripherals.modem,
+    //     event_loop,
+    //     timer,
+    //     Some(nvs_default_partition),
+    // )
+    // .await?;
+    // wifi_connection.connect().await?;
+    let _wifi = connect(
         peripherals.modem,
         event_loop,
         timer,
         Some(nvs_default_partition),
     )
     .await?;
+    // tcp_server().await?;
     // run_server(wifi_connection.state.clone()),
-    try_join!(wifi_connection.connect(), modbus::server())?;
+    // try_join!(wifi_connection.connect(), modbus::server())?;
+    select! {
+        _ = tcp::server() => println!("Exiting"),
+        _ = modbus::server() => println!("Exiting"),
+    }
     Ok(())
 }
 
@@ -148,6 +163,7 @@ async fn temperature() -> Result<()> {
 }
 
 mod modbus;
+mod tcp;
 mod wifi;
 
 // // addresses
