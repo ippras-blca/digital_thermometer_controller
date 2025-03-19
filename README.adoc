@@ -55,8 +55,10 @@ cargo run
 * link:https://github.com/esp-rs/esp-idf-hal/blob/4f4478718e88344082b82af455192ba10efd41c8/src/onewire.rs[onewire]
 * link:https://github.com/esp-rs/esp-idf-hal/blob/ff343b67f37331bf0ee335af8360a37fce99761e/examples/rmt_onewire_temperature.rs[example rmt onewire temperature]
 
+* link:https://github.com/esp-rs/no_std-training[no std training]
 * link:https://github.com/esp-rs/esp-hal/issues/2892[no std]
 * link:https://github.com/Mossop/garage-sensor[no std ]
 
+* link:https://github.com/esp-rs/std-training[std training]
 * link:https://github.com/esp-rs/esp-idf-svc/blob/master/examples/tcp_async.rs[tokio tcp]
 * link:https://github.com/dephy-io/dephy-esp32c3-rust-boilerplate[tokio boilerplate]

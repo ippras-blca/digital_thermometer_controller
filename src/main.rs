@@ -12,8 +12,10 @@ use esp_idf_svc::{
     wifi::WifiEvent,
 };
 use log::{error, info, warn};
-use tokio::runtime::Builder;
+use tokio::{runtime::Builder, select};
 use wifi::connect;
+
+const MAC_ADDRESS: &str = "7c:df:a1:a3:5a:f8";
 
 fn main() -> Result<()> {
     link_patches();
@@ -33,23 +35,6 @@ fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    // spawn(async move {
-    //     loop {
-    //         log::info!("tokio 2");
-    //         sleep(Duration::from_millis(1000)).await;
-    //     }
-    // });
-    // spawn(async move {
-    //     loop {
-    //         info!("Spawn temperature");
-    //         if let Err(error) =
-    //             temperature::run(&mut peripherals.pins.gpio2, &mut peripherals.rmt.channel0).await
-    //         {
-    //             error!("{error:?}");
-    //         }
-    //         sleep(Duration::from_millis(1000)).await;
-    //     }
-    // });
     let event_loop = EspSystemEventLoop::take()?;
     let timer = EspTaskTimerService::new()?;
     let peripherals = Peripherals::take()?;
@@ -66,62 +51,16 @@ async fn run() -> Result<()> {
     })?;
     // Run temperature reader
     let temperature_sender = temperature::run(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
-    // Run modbus server
-    modbus::server(temperature_sender).await?;
+    select! {
+        // Run MQTT server
+        _ = mqtt::run(temperature_sender.clone()) => {},
+        // Run modbus server
+        _ = modbus::run(temperature_sender.clone()) => {},
+    }
     Ok(())
 }
 
 mod modbus;
-mod tcp;
+mod mqtt;
 mod temperature;
 mod wifi;
-
-// // addresses
-// // 0x230000046eafbc28
-// // 0: 0x4500000088204e28
-// // 1: 0x970000006a14fe28
-// fn main() -> Result<()> {
-//     link_patches();
-//     // Bind the log crate to the ESP Logging facilities
-//     EspLogger::initialize_default();
-//     info!("Initialize");
-//     let peripherals = Peripherals::take()?;
-//     // let mut led = Led::new(peripherals.pins.gpio8, peripherals.rmt.channel0)?;
-//     let mut thermometer = Ds18b20Driver::new(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
-//     info!("Thermometer initialized");
-//     let addresses = ADDRESSES.get_or_try_init(|| thermometer.search()?.collect())?;
-//     for address in addresses {
-//         let scratchpad = thermometer
-//             .initialization()?
-//             .match_rom(&address)?
-//             .read_scratchpad()?;
-//         info!("{address:x?}: {scratchpad:?}");
-//     }
-//     for address in addresses {
-//         thermometer
-//             .initialization()?
-//             .match_rom(&address)?
-//             .write_scratchpad(&Scratchpad {
-//                 alarm_high_trigger_register: 30,
-//                 alarm_low_trigger_register: 10,
-//                 configuration_register: ConfigurationRegister {
-//                     resolution: Resolution::Twelve,
-//                 },
-//                 ..Default::default()
-//             })?;
-//     }
-//     for address in addresses {
-//         let scratchpad = thermometer
-//             .initialization()?
-//             .match_rom(&address)?
-//             .read_scratchpad()?;
-//         info!("{address:x?}: {scratchpad:?}");
-//     }
-//     loop {
-//         for address in addresses {
-//             let temperature = thermometer.temperature(&address)?;
-//             info!("{address:x?}: {temperature}");
-//         }
-//         Delay::new_default();
-//     }
-// }

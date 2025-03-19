@@ -1,6 +1,6 @@
 use esp_idf_svc::hal::{gpio::IOPin, onewire::OWAddress, peripheral::Peripheral, rmt::RmtChannel};
 use log::{info, trace};
-use std::ops::Range;
+use std::{collections::BTreeMap, ops::Range};
 use thermometer::{
     Ds18b20Driver,
     scratchpad::{ConfigurationRegister, Resolution, Scratchpad},
@@ -15,7 +15,10 @@ use tokio::{
 };
 use tokio_modbus::prelude::ExceptionCode;
 
-pub(crate) type Request = (Range<usize>, OneshotSender<Result<Vec<f32>, Error>>);
+pub(crate) type Request = (
+    Range<usize>,
+    OneshotSender<Result<BTreeMap<u64, f32>, Error>>,
+);
 
 pub(super) fn run(
     pin: impl Peripheral<P = impl IOPin> + 'static,
@@ -66,7 +69,7 @@ pub(super) fn run(
                         expected: 0..addresses.len(),
                     });
                 }
-                let mut temperatures = Vec::with_capacity(indices.len());
+                let mut temperatures = BTreeMap::new();
                 driver.initialization()?.skip_rom()?.convert_temperature()?;
                 for index in indices {
                     let address = &addresses[index];
@@ -75,8 +78,8 @@ pub(super) fn run(
                         .match_rom(address)?
                         .read_scratchpad()?
                         .temperature;
-                    info!("{address:x?}: {temperature}");
-                    temperatures.push(temperature);
+                    trace!("{address:x?}: {temperature}");
+                    temperatures.insert(address.address(), temperature);
                 }
                 Ok(temperatures)
             })());
