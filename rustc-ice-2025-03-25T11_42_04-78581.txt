@@ -1,0 +1,41 @@
+thread 'opt 454j3m8cntkbbspnziyzqde6h' panicked at /rustc/6650252439d4e03368b305c42a10006e36f1545e/compiler/rustc_codegen_ssa/src/back/write.rs:918:21:
+Error writing pre-lto-bitcode file `/dev/shm/targeto0PXI8n5hK_0erwvct5Q1/riscv32imc-esp-espidf/debug/incremental/digital_thermometer_controller-35th6nb6h6ywa/s-h5t2jsq1a5-0a2rj3n-working/454j3m8cntkbbspnziyzqde6h.pre-lto.bc`: No space left on device (os error 28)
+stack backtrace:
+   0:     0x7fdcd8ec2665 - std::backtrace::Backtrace::create::h396f65bc91e1f60f
+   1:     0x7fdcd7219fe5 - std::backtrace::Backtrace::force_capture::hec4688dcd2b3a6e4
+   2:     0x7fdcd629c130 - std[f63e3c6b1081153]::panicking::update_hook::<alloc[d69180f9223661db]::boxed::Box<rustc_driver_impl[6093eeb100453fe2]::install_ice_hook::{closure#1}>>::{closure#0}
+   3:     0x7fdcd72324d3 - std::panicking::rust_panic_with_hook::hffd78d6c35b62880
+   4:     0x7fdcd72321ca - std::panicking::begin_panic_handler::{{closure}}::h9c98e10e23fab9b0
+   5:     0x7fdcd722f9a9 - std::sys::backtrace::__rust_end_short_backtrace::h90d40e885ed4f31d
+   6:     0x7fdcd7231e8d - rust_begin_unwind
+   7:     0x7fdcd3c736b0 - core::panicking::panic_fmt::ha49df06cdb686cd1
+   8:     0x7fdcd89e81cf - std[f63e3c6b1081153]::sys::backtrace::__rust_begin_short_backtrace::<<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend as rustc_codegen_ssa[4dec82380125d12]::traits::backend::ExtraBackendMethods>::spawn_named_thread<rustc_codegen_ssa[4dec82380125d12]::back::write::spawn_work<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend>::{closure#0}, ()>::{closure#0}, ()>
+   9:     0x7fdcd89e0f9c - <<std[f63e3c6b1081153]::thread::Builder>::spawn_unchecked_<<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend as rustc_codegen_ssa[4dec82380125d12]::traits::backend::ExtraBackendMethods>::spawn_named_thread<rustc_codegen_ssa[4dec82380125d12]::back::write::spawn_work<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend>::{closure#0}, ()>::{closure#0}, ()>::{closure#1} as core[35fc12260e1c1df4]::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}
+  10:     0x7fdcd89e132b - std::sys::pal::unix::thread::Thread::new::thread_start::h595d47480b66573e
+  11:     0x7fdcd2866ac3 - <unknown>
+  12:     0x7fdcd28f8850 - <unknown>
+  13:                0x0 - <unknown>
+
+
+rustc version: 1.87.0-nightly (665025243 2025-03-11)
+platform: x86_64-unknown-linux-gnuthread 'coordinator' panicked at /rustc/6650252439d4e03368b305c42a10006e36f1545e/compiler/rustc_codegen_ssa/src/back/write.rs:1689:29:
+/rustc/6650252439d4e03368b305c42a10006e36f1545e/compiler/rustc_codegen_ssa/src/back/write.rs:1689:29: worker thread panicked
+stack backtrace:
+   0:     0x7fdcd8ec2665 - std::backtrace::Backtrace::create::h396f65bc91e1f60f
+   1:     0x7fdcd7219fe5 - std::backtrace::Backtrace::force_capture::hec4688dcd2b3a6e4
+   2:     0x7fdcd629c130 - std[f63e3c6b1081153]::panicking::update_hook::<alloc[d69180f9223661db]::boxed::Box<rustc_driver_impl[6093eeb100453fe2]::install_ice_hook::{closure#1}>>::{closure#0}
+   3:     0x7fdcd72324d3 - std::panicking::rust_panic_with_hook::hffd78d6c35b62880
+   4:     0x7fdcd688d322 - std[f63e3c6b1081153]::panicking::begin_panic::<alloc[d69180f9223661db]::string::String>::{closure#0}
+   5:     0x7fdcd6886ed6 - std[f63e3c6b1081153]::sys::backtrace::__rust_end_short_backtrace::<std[f63e3c6b1081153]::panicking::begin_panic<alloc[d69180f9223661db]::string::String>::{closure#0}, !>
+   6:     0x7fdcd6882507 - std[f63e3c6b1081153]::panicking::begin_panic::<alloc[d69180f9223661db]::string::String>
+   7:     0x7fdcd691d397 - rustc_middle[39bdaa4154ccc98d]::util::bug::opt_span_bug_fmt::<rustc_span[222a8061a18fa9da]::span_encoding::Span>::{closure#0}
+   8:     0x7fdcd68fa8aa - rustc_middle[39bdaa4154ccc98d]::ty::context::tls::with_opt::<rustc_middle[39bdaa4154ccc98d]::util::bug::opt_span_bug_fmt<rustc_span[222a8061a18fa9da]::span_encoding::Span>::{closure#0}, !>::{closure#0}
+   9:     0x7fdcd68fa71b - rustc_middle[39bdaa4154ccc98d]::ty::context::tls::with_context_opt::<rustc_middle[39bdaa4154ccc98d]::ty::context::tls::with_opt<rustc_middle[39bdaa4154ccc98d]::util::bug::opt_span_bug_fmt<rustc_span[222a8061a18fa9da]::span_encoding::Span>::{closure#0}, !>::{closure#0}, !>
+  10:     0x7fdcd4586710 - rustc_middle[39bdaa4154ccc98d]::util::bug::bug_fmt
+  11:     0x7fdcd8b95883 - rustc_codegen_ssa[4dec82380125d12]::back::write::start_executing_work::<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend>::{closure#5}
+  12:     0x7fdcd89e21f9 - std[f63e3c6b1081153]::sys::backtrace::__rust_begin_short_backtrace::<<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend as rustc_codegen_ssa[4dec82380125d12]::traits::backend::ExtraBackendMethods>::spawn_named_thread<rustc_codegen_ssa[4dec82380125d12]::back::write::start_executing_work<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend>::{closure#5}, core[35fc12260e1c1df4]::result::Result<rustc_codegen_ssa[4dec82380125d12]::back::write::CompiledModules, ()>>::{closure#0}, core[35fc12260e1c1df4]::result::Result<rustc_codegen_ssa[4dec82380125d12]::back::write::CompiledModules, ()>>
+  13:     0x7fdcd89e1f3e - <<std[f63e3c6b1081153]::thread::Builder>::spawn_unchecked_<<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend as rustc_codegen_ssa[4dec82380125d12]::traits::backend::ExtraBackendMethods>::spawn_named_thread<rustc_codegen_ssa[4dec82380125d12]::back::write::start_executing_work<rustc_codegen_llvm[d0e38fd1d28e730a]::LlvmCodegenBackend>::{closure#5}, core[35fc12260e1c1df4]::result::Result<rustc_codegen_ssa[4dec82380125d12]::back::write::CompiledModules, ()>>::{closure#0}, core[35fc12260e1c1df4]::result::Result<rustc_codegen_ssa[4dec82380125d12]::back::write::CompiledModules, ()>>::{closure#1} as core[35fc12260e1c1df4]::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}
+  14:     0x7fdcd89e132b - std::sys::pal::unix::thread::Thread::new::thread_start::h595d47480b66573e
+  15:     0x7fdcd2866ac3 - <unknown>
+  16:     0x7fdcd28f8850 - <unknown>
+  17:                0x0 - <unknown>

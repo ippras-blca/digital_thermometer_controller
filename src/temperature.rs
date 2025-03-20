@@ -20,7 +20,7 @@ pub(crate) type Request = (
     OneshotSender<Result<BTreeMap<u64, f32>, Error>>,
 );
 
-pub(super) fn run(
+pub(super) fn start(
     pin: impl Peripheral<P = impl IOPin> + 'static,
     channel: impl Peripheral<P = impl RmtChannel> + 'static,
 ) -> Result<Sender<Request>> {
@@ -94,7 +94,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// Error
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Unexpected index {{ received: {received:?}, expected: {expected:?} }}")]
+    #[error("Invalid index {{ received: {received:?}, expected: {expected:?} }}")]
     InvalidIndex {
         received: Range<usize>,
         expected: Range<usize>,

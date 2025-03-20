@@ -7,15 +7,19 @@ use esp_idf_svc::{
     io::vfs::MountedEventfs,
     log::EspLogger,
     nvs::EspDefaultNvsPartition,
+    sntp::EspSntp,
     sys::link_patches,
     timer::EspTaskTimerService,
     wifi::WifiEvent,
 };
 use log::{error, info, warn};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::runtime::Builder;
 use wifi::connect;
 
-const _MAC_ADDRESS: &str = "7c:df:a1:a3:5a:f8";
+const MAC_ADDRESS: &str = "7c:df:a1:a3:5a:f8";
+// const TIMESTAMP: Duration = Duration::from_secs(1767214800);
+const TIMESTAMP: Duration = Duration::from_secs(1742903600);
 
 fn main() -> Result<()> {
     link_patches();
@@ -49,16 +53,27 @@ async fn run() -> Result<()> {
             }
         }
     })?;
-    // Start deadline checker
-    deadline::start();
-    // Start temperature reader
-    let temperature_sender = temperature::start(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
-    // Run modbus server
+    // Keep it around or else the SNTP service will stop
+    let _sntp = EspSntp::new_default()?;
+    info!("SNTP initialized");
+    let now = SystemTime::now();
+    error!("now: {now:?}");
+    error!("TIMESTAMP: {TIMESTAMP:?}");
+    if now < UNIX_EPOCH + TIMESTAMP {
+        panic!("TIMESTAMP: {TIMESTAMP:?}");
+    }
+    // Run temperature reader
+    let temperature_sender = temperature::run(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
     modbus::run(temperature_sender.clone()).await?;
+    // select! {
+    //     // Run MQTT server
+    //     // _ = mqtt::run(temperature_sender.clone()) => {},
+    //     // Run modbus server
+    //     _ = modbus::run(temperature_sender.clone()) => {},
+    // }
     Ok(())
 }
 
-mod deadline;
 mod modbus;
 mod temperature;
 mod wifi;

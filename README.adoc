@@ -62,3 +62,5 @@ cargo run
 * link:https://github.com/esp-rs/std-training[std training]
 * link:https://github.com/esp-rs/esp-idf-svc/blob/master/examples/tcp_async.rs[tokio tcp]
 * link:https://github.com/dephy-io/dephy-esp32c3-rust-boilerplate[tokio boilerplate]
+
+* link:https://www.reddit.com/r/rust/comments/i5hppj/smol_vs_tokio_vs_asyncstd[smol vs tokio]
