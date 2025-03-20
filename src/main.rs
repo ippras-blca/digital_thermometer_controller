@@ -53,14 +53,14 @@ async fn run() -> Result<()> {
     let temperature_sender = temperature::run(peripherals.pins.gpio2, peripherals.rmt.channel0)?;
     select! {
         // Run MQTT server
-        _ = mqtt::run(temperature_sender.clone()) => {},
+        // _ = mqtt::run(temperature_sender.clone()) => {},
         // Run modbus server
         _ = modbus::run(temperature_sender.clone()) => {},
     }
     Ok(())
 }
 
+// mod mqtt;
 mod modbus;
-mod mqtt;
 mod temperature;
 mod wifi;

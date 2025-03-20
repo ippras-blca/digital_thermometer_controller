@@ -94,7 +94,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// Error
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Unexpected index {{ received: {received:?}, expected: {expected:?} }}")]
+    #[error("Invalid index {{ received: {received:?}, expected: {expected:?} }}")]
     InvalidIndex {
         received: Range<usize>,
         expected: Range<usize>,
