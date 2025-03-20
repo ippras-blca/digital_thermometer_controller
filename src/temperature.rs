@@ -32,14 +32,14 @@ pub(super) fn run(
     for address in &addresses {
         let scratchpad = driver
             .initialization()?
-            .match_rom(&address)?
+            .match_rom(address)?
             .read_scratchpad()?;
         info!("{address:x?}: {scratchpad:?}");
     }
     for address in &addresses {
         driver
             .initialization()?
-            .match_rom(&address)?
+            .match_rom(address)?
             .write_scratchpad(&Scratchpad {
                 alarm_high_trigger_register: 30,
                 alarm_low_trigger_register: 10,
@@ -52,7 +52,7 @@ pub(super) fn run(
     for address in &addresses {
         let scratchpad = driver
             .initialization()?
-            .match_rom(&address)?
+            .match_rom(address)?
             .read_scratchpad()?;
         info!("{address:x?}: {scratchpad:?}");
     }
